@@ -4,8 +4,6 @@ import datetime
 
 conkey = "1f43aa68b629139c9ce8bc00255b3568"
 seckey = "cf8f62aafbd961f16909e16caace7674"
-bithumb = pybithumb(conkey, seckey)
-print("auto trade start!")
 
 def get_target_price(ticker, k): #매수 목표가
 
@@ -31,7 +29,8 @@ def get_my_balance(ticker): #내 잔고
 def get_current_price(ticker):
     return pybithumb.get_orderbook(tickers = ticker)[0]["orderbook_units"][0]["ask_price"]
 
-
+bithumb = pybithumb.Bithumb(conkey,seckey)
+print("auto trade start!")
 while True:
     try:
         now = datetime.datetime.now()
@@ -54,7 +53,7 @@ while True:
     except Exception as e:
         print(e)
         time.sleep(1)
-    price = pybithumb.get_current_price("BTC")
-    price(price)
-    time.sleep(0.2)
+
+
+
 
