@@ -1,59 +1,70 @@
 import pybithumb
 import time
 import datetime
+from pybithumb.client import Bithumb
 
 conkey = "1f43aa68b629139c9ce8bc00255b3568"
 seckey = "cf8f62aafbd961f16909e16caace7674"
+bithumb = pybithumb.Bithumb(conkey,seckey)
 
 def get_target_price(ticker, k): #매수 목표가
+    df = pybithumb.get_ohlcv(ticker)   
+    yesterday = df.iloc[-2]
+    today_open = yesterday['close']
+    yesterday_high = yesterday['high']
+    yesterday_low = yesterday['low']
+    target = today_open + (yesterday_high - yesterday_low) * k
+    return target
 
-    df = pybithumb.get_ohlcv(ticker, interval="day",count = 2)   
-    target_price = df.iloc[0]['close'] + (df.iloc[0]['high'] - df.iloc[0]['low']) * k
-    return target_price
+# def get_start_time(ticker):  #시작 시간
+#     df = pybithumb.get_ohlcv(ticker,interval="day")
+#     start_time = df.index[0]
+#     return start_time
 
-def get_start_time(ticker):  #시작 시간
-    df = pybithumb.get_ohlcv(ticker,interval="day", count = 1)
-    start_time = df.index[0]
-    return start_time
 
-def get_my_balance(ticker): #내 잔고
-    balances = bithumb.get_balance()
-    for i in balances:
-        if i['currency'] == ticker:
-            if i['balance'] is not None:
-                return float(i['balance'])
-            else:
-                return 0
-    return 0
-            
-def get_current_price(ticker):
-    return pybithumb.get_orderbook(tickers = ticker)[0]["orderbook_units"][0]["ask_price"]
+# def get_balance(ticker): #내 잔고
+#     balances = Bithumb.get_balances()
+#     for b in balances:
+#         if b['currency'] == ticker:
+#             if b['balance'] is not None:
+#                 return float(b['balance'])
+#             else:
+#                 return 0
+#     return 0
 
-bithumb = pybithumb.Bithumb(conkey,seckey)
+def buy_crypto_currency(ticker):
+    krw = bithumb.get_balance(ticker)[2]
+    orderbook = pybithumb.get_orderbook(ticker)
+    sell_price = orderbook['asks'][0]['price']   
+    unit = krw/float(sell_price)
+    bithumb.buy_market_order(ticker, unit)
+
+def sell_crypto_currency(ticker):
+    unit = bithumb.get_balance(ticker)[0]
+    bithumb.sell_market_order(ticker, unit)
+
+# def get_current_price(ticker):
+#     """현재가 조회"""
+#     return pybithumb.get_orderbook(tickers=ticker)[0]["orderbook_units"][0]["ask_price"]
+
+now = datetime.datetime.now()
+mid = datetime.datetime(now.year, now.month, now.day) + datetime.timedelta(1)
+target_price = get_target_price("BTC",0.5)
 print("auto trade start!")
 while True:
     try:
         now = datetime.datetime.now()
-        start_time = get_start_time("KRW-BTC")
-        end_time = start_time + datetime.timedelta(seconds= 10)
+        if mid < now < mid + datetime.timedelta(seconds=10): 
+            target_price = get_target_price("BTC",0.5)
+            mid = datetime.datetime(now.year, now.month, now.day) + datetime.timedelta(1)
+            sell_crypto_currency("BTC")
 
+        current_price = pybithumb.get_current_price("BTC")
+        if current_price > target_price:
+            buy_crypto_currency("BTC")
 
-        if start_time < now < end_time:
-            target_price = get_target_price("KRW-BTC", 0.5)
-            current_price = get_current_price("KRW-BTC")
-            if target_price < current_price:
-                krw = get_my_balance("KRW")
-                if krw > 5000:
-                    pybithumb.Bithumb.buy_market_order("KRW_BTC", krw*0.9995)
-        else:
-            btc = get_my_balance("BTC")
-            if btc > 0.00008:
-                pybithumb.Bithumb.sell_market_order("KRW-BTC", btc*0.9995)
-        time.sleep(1)
-    except Exception as e:
-        print(e)
-        time.sleep(1)
-
-
+    except:
+        print("에러")
+    time.sleep(1)
 
 
